@@ -10,15 +10,15 @@ class URL:
            url = url + "/"
         self.host, url = url.split("/", 1)
         self.path = "/" + url
-
-        if ":" in self.host:
-           self.host, port = self.host.split(":", 1)
-           self.port = int(port)
         
         if self.scheme == "http":
            self.port = 80
         elif self.scheme == "https":
            self.port = 443
+
+        if ":" in self.host:
+           self.host, port = self.host.split(":", 1)
+           self.port = int(port)
 
    def request(self) -> str:
        s = socket.socket(
@@ -32,9 +32,10 @@ class URL:
           ctx = ssl.create_default_context()
           s = ctx.wrap_socket(s, server_hostname=self.host)
         
-       request = f"GET {self.path} HTTP/1.0\r\n"
+       request = f"GET {self.path} HTTP/1.1\r\n"
        request += f"Host: {self.host}\r\n"
        request += f"Connection: close\r\n"
+       request += f"User-Agent: PyBrow\r\n"
        request += "\r\n"
        s.send(request.encode("utf8"))
 
