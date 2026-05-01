@@ -4,8 +4,14 @@ from urllib.parse import unquote
 
 class URL:
    def __init__(self, url: str) -> None:
-        self.scheme, url = url.split("://", 1)
-        assert self.scheme in ["http", "https", "file"]
+        if url.startswith("data:"):
+           self.scheme , url = url.split(":", 1) 
+           self.mime, self.data = url.split(",", 1)
+           return 
+        else:
+           self.scheme, url = url.split("://", 1)
+
+        assert self.scheme in ["http", "https", "file", "data"]
 
         if "/" not in url:
            url = url + "/"
@@ -40,7 +46,8 @@ class URL:
 		  f"Host: {self.host}",
 		  f"Connection: close",
 		  f"User-Agent: PyBrow",
-                 ]
+       ]
+
        request = "\r\n".join(headers) + "\r\n\r\n"
 
        s.sendall(request.encode("utf8"))
@@ -66,6 +73,7 @@ class URL:
        return content
 
    def request_file(self) -> str:
+      assert self.scheme == "file"
       content = ""
       path = unquote(self.path)
       with open(path, encoding="utf-8") as f:
@@ -73,8 +81,12 @@ class URL:
             content += line
       content += "\n"
       return content
-         
 
+   def request_data(self) -> str:
+      assert self.scheme == "data"
+      return unquote(self.data) + "\n"
+      
+      
 def show(body: str) -> None:
    in_tag = False
    for c in body:
@@ -88,8 +100,11 @@ def show(body: str) -> None:
 def load(url: URL) -> None:
    if url.scheme in ["http", "https"]:
       body = url.request_http()
-   else:
+   elif url.scheme == "file":
       body = url.request_file()
+   else:
+      body = url.request_data()
+            
    show(body)
 
 if __name__ == "__main__":
