@@ -1,10 +1,11 @@
 import ssl
 import socket
+from urllib.parse import unquote
 
 class URL:
    def __init__(self, url: str) -> None:
         self.scheme, url = url.split("://", 1)
-        assert self.scheme in ["http", "https"]
+        assert self.scheme in ["http", "https", "file"]
 
         if "/" not in url:
            url = url + "/"
@@ -15,12 +16,14 @@ class URL:
            self.port = 80
         elif self.scheme == "https":
            self.port = 443
+        else:
+           self.port = None
 
         if ":" in self.host:
            self.host, port = self.host.split(":", 1)
            self.port = int(port)
 
-   def request(self) -> str:
+   def request_http(self) -> str:
        s = socket.socket(
 	     family=socket.AF_INET,
 	     type=socket.SOCK_STREAM,
@@ -62,6 +65,16 @@ class URL:
   
        return content
 
+   def request_file(self) -> str:
+      content = ""
+      path = unquote(self.path)
+      with open(path, encoding="utf-8") as f:
+         for line in f:
+            content += line
+      content += "\n"
+      return content
+         
+
 def show(body: str) -> None:
    in_tag = False
    for c in body:
@@ -73,7 +86,10 @@ def show(body: str) -> None:
          print(c, end="")
 
 def load(url: URL) -> None:
-   body = url.request()
+   if url.scheme in ["http", "https"]:
+      body = url.request_http()
+   else:
+      body = url.request_file()
    show(body)
 
 if __name__ == "__main__":

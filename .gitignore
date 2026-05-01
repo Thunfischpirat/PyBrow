@@ -1,3 +1,4 @@
 *.swp
 *.html
 .codex
+__pycache__/
