@@ -1,43 +1,16 @@
 import ssl
 import socket
 from urllib.parse import unquote
+from typing import List
 
 OPEN_SOCKETS = {}
 
 
 class URL:
     def __init__(self, url: str) -> None:
-        self.view_source = False
-        if url.startswith("view-source:"):
-            _, url = url.split(":", 1)
-            self.view_source = True
-        if url.startswith("data:"):
-            self.scheme, url = url.split(":", 1)
-            self.mime, self.data = url.split(",", 1)
-            return
-        else:
-            self.scheme, url = url.split("://", 1)
+       self._setup(url)
 
-        assert self.scheme in ["http", "https", "file", "data"]
-
-        if "/" not in url:
-            url = url + "/"
-
-        self.host, url = url.split("/", 1)
-        self.path = "/" + url
-
-        if self.scheme == "http":
-            self.port = 80
-        elif self.scheme == "https":
-            self.port = 443
-        else:
-            self.port = None
-
-        if ":" in self.host:
-            self.host, port = self.host.split(":", 1)
-            self.port = int(port)
-
-    def request_http(self) -> str:
+    def request_http(self, redirect_count: int = 0) -> str:
         s = OPEN_SOCKETS.get(f"{self.scheme}-{self.host}-{self.port}")
 
         if s is None:
@@ -80,6 +53,21 @@ class URL:
         assert "content-encoding" not in response_headers
         assert "transfer-encoding" not in response_headers
 
+        if int(status) >= 300 and int(status) < 400:
+           redirect_count += 1
+           if redirect_count > 5:
+              raise RuntimeError(f"Maximum number of 5 redirects exceeded")
+
+           url = response_headers.get("location")
+           if url is None:
+              raise KeyError("location")
+              
+           num_bytes = int(response_headers["content-length"])
+           raw = response.read(num_bytes)
+
+           self._setup(url)
+           return self.request_http(redirect_count)
+
         num_bytes = int(response_headers["content-length"])
         raw = response.read(num_bytes)
         content = raw.decode("utf-8")
@@ -99,6 +87,40 @@ class URL:
     def request_data(self) -> str:
         assert self.scheme == "data"
         return unquote(self.data) + "\n"
+
+    def _setup(self, url: str) -> None:
+        self.view_source = False
+        if url.startswith("view-source:"):
+            _, url = url.split(":", 1)
+            self.view_source = True
+        if url.startswith("data:"):
+            self.scheme, url = url.split(":", 1)
+            self.mime, self.data = url.split(",", 1)
+            return
+        elif url.startswith("/"):
+            self.path = url
+            return
+        else:
+            self.scheme, url = url.split("://", 1)
+
+        assert self.scheme in ["http", "https", "file", "data"]
+
+        if "/" not in url:
+            url = url + "/"
+
+        self.host, url = url.split("/", 1)
+        self.path = "/" + url
+
+        if self.scheme == "http":
+            self.port = 80
+        elif self.scheme == "https":
+            self.port = 443
+        else:
+            self.port = None
+
+        if ":" in self.host:
+            self.host, port = self.host.split(":", 1)
+            self.port = int(port)
 
 
 def show(body: str, view_source: bool) -> None:
