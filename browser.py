@@ -1,7 +1,9 @@
 import ssl
+import sys
 import socket
+import gzip
+
 from urllib.parse import unquote
-from typing import List
 
 OPEN_SOCKETS = {}
 
@@ -32,6 +34,7 @@ class URL:
             f"Host: {self.host}",
              "Connection: keep-alive",
              "User-Agent: PyBrow",
+             "Accept-Encoding: gzip"
         ]
 
         request = "\r\n".join(headers) + "\r\n\r\n"
@@ -50,9 +53,6 @@ class URL:
             header, value = line.split(":", 1)
             response_headers[header.casefold()] = value.strip()
 
-        assert "content-encoding" not in response_headers
-        assert "transfer-encoding" not in response_headers
-
         if int(status) >= 300 and int(status) < 400:
            redirect_count += 1
            if redirect_count > 5:
@@ -61,15 +61,47 @@ class URL:
            url = response_headers.get("location")
            if url is None:
               raise KeyError("location")
+           
+           if "content-length" in response_headers:  
+              num_bytes = int(response_headers["content-length"])
+              response.read(num_bytes)
+           elif "transfer-encoding" in response_headers:
+              num_bytes = int(response.readline(), 16) 
+              while num_bytes > 0:
+                 response.read(num_bytes)
+                 response.readline()
+                 num_bytes = int(response.readline(), 16)
+              while True:
+                 line = response.readline()
+                 if line == b"\r\n":
+                    break
+           else:
+              response.read()
               
-           num_bytes = int(response_headers["content-length"])
-           raw = response.read(num_bytes)
 
            self._setup(url)
            return self.request_http(redirect_count)
+        
+        if "content-length" in response_headers:
+           num_bytes = int(response_headers["content-length"])
+           raw = response.read(num_bytes)
+        elif "transfer-encoding" in response_headers:
+           num_bytes = int(response.readline(), 16)
+           raw = b""
+           while num_bytes > 0:
+              raw += response.read(num_bytes)
+              response.readline()
+              num_bytes = int(response.readline(), 16)
+           while True:
+              line = response.readline()
+              if line == b"\r\n":
+                 break
+        else:
+           raw = response.read()
 
-        num_bytes = int(response_headers["content-length"])
-        raw = response.read(num_bytes)
+        if response_headers.get("content-encoding") == "gzip": 
+           raw = gzip.decompress(raw)
+
         content = raw.decode("utf-8")
 
         return content
@@ -160,6 +192,4 @@ def load(url: URL) -> None:
     show(body, url.view_source)
 
 if __name__ == "__main__":
-    import sys
-
     load(URL(sys.argv[1]))
