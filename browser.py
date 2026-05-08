@@ -72,6 +72,8 @@ class Browser:
 
       self.window.bind("<Down>", self._scrolldown)
       self.window.bind("<Up>", self._scrollup)
+      self.window.bind("<Button-4>", self._scrollup) 
+      self.window.bind("<Button-5>", self._scrolldown)
 
    def load(self, url: URL) -> None:
       if url.scheme in ["http", "https"]:
@@ -96,9 +98,9 @@ class Browser:
       self._draw()
 
    def _scrollup(self, e: tkinter.EventType) -> None:
-      self.scroll -= SCROLL_STEP
+      if self.scroll >= SCROLL_STEP:
+         self.scroll -= SCROLL_STEP
       self._draw()
-      
 
 if __name__ == "__main__":
    Browser().load(URL(sys.argv[1]))
