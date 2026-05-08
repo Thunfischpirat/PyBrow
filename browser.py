@@ -3,7 +3,7 @@ import sys
 
 from url import URL
 
-WIDTH, HEIGHT = 800, 600
+DEFAULT_WIDTH, DEFAULT_HEIGHT = 800, 600
 HSTEP, VSTEP = 13, 18
 SCROLL_STEP = 100
 
@@ -39,7 +39,7 @@ def lex(body: str, view_source: bool = False) -> str:
     return text
 
 
-def layout(text: str) -> list[tuple[int, int, str]]:
+def layout(text: str, width: int) -> list[tuple[int, int, str]]:
    display_list = []
    cursor_x, cursor_y = HSTEP, VSTEP
    for c in text:
@@ -50,7 +50,7 @@ def layout(text: str) -> list[tuple[int, int, str]]:
           display_list.append((cursor_x, cursor_y, c))
           cursor_x += HSTEP
 
-          if cursor_x >= WIDTH - HSTEP:
+          if cursor_x >= width - HSTEP:
              cursor_y += VSTEP
              cursor_x = HSTEP
 
@@ -59,21 +59,30 @@ def layout(text: str) -> list[tuple[int, int, str]]:
 
 class Browser:
    def __init__(self):
+
+      self.text = ""
+      self.display_list = []
+
+      self.width = DEFAULT_WIDTH
+      self.height = DEFAULT_HEIGHT
+
       self.window = tkinter.Tk()
       self.window.title("PyBrow")
       self.canvas = tkinter.Canvas(
          self.window,
-         width=WIDTH,
-         height=HEIGHT
+         width=DEFAULT_WIDTH,
+         height=DEFAULT_HEIGHT
       )
-      self.canvas.pack()
+      self.canvas.pack(fill="both", expand=True)
 
       self.scroll = 0
 
       self.window.bind("<Down>", self._scrolldown)
       self.window.bind("<Up>", self._scrollup)
-      self.window.bind("<Button-4>", self._scrollup) 
+      self.window.bind("<Button-4>", self._scrollup)
       self.window.bind("<Button-5>", self._scrolldown)
+
+      self.window.bind("<Configure>", self._resize)
 
    def load(self, url: URL) -> None:
       if url.scheme in ["http", "https"]:
@@ -82,15 +91,15 @@ class Browser:
           body = url.request_file()
       else:
           body = url.request_data()
-      
-      text = lex(body, url.view_source)  
-      self.display_list = layout(text)
+
+      self.text = lex(body, url.view_source)
+      self.display_list = layout(self.text, self.width)
       self._draw()
 
    def _draw(self) -> None:
       self.canvas.delete("all")
       for x, y, c in self.display_list:
-         if y - HEIGHT <= self.scroll <= y + VSTEP:
+         if y - self.height <= self.scroll <= y + VSTEP:
             self.canvas.create_text(x, y - self.scroll, text=c)
 
    def _scrolldown(self, e: tkinter.EventType) -> None:
@@ -101,6 +110,14 @@ class Browser:
       if self.scroll >= SCROLL_STEP:
          self.scroll -= SCROLL_STEP
       self._draw()
+
+   def _resize(self, e: tkinter.EventType) -> None:
+     self.width = e.width
+     self.height = e.height
+
+     if self.text and self.display_list:
+         self.display_list = layout(self.text, self.width)
+         self._draw()
 
 if __name__ == "__main__":
    Browser().load(URL(sys.argv[1]))
