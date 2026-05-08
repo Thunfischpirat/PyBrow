@@ -7,6 +7,8 @@ WIDTH, HEIGHT = 800, 600
 HSTEP, VSTEP = 13, 18
 SCROLL_STEP = 100
 
+PARAGRAPH_BREAK = 1.3
+
 
 def lex(body: str, view_source: bool = False) -> str:
     in_tag = False
@@ -41,12 +43,16 @@ def layout(text: str) -> list[tuple[int, int, str]]:
    display_list = []
    cursor_x, cursor_y = HSTEP, VSTEP
    for c in text:
-      display_list.append((cursor_x, cursor_y, c))
-      cursor_x += HSTEP
+      if c == "\n":
+          cursor_y += PARAGRAPH_BREAK * VSTEP
+          cursor_x = HSTEP
+      else:
+          display_list.append((cursor_x, cursor_y, c))
+          cursor_x += HSTEP
 
-      if cursor_x >= WIDTH - HSTEP:
-         cursor_y += VSTEP
-         cursor_x = HSTEP
+          if cursor_x >= WIDTH - HSTEP:
+             cursor_y += VSTEP
+             cursor_x = HSTEP
 
    return display_list
 
