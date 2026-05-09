@@ -39,7 +39,10 @@ class URL:
 
             self._read_response(response_headers, response)
             self._setup(url)
-            return self.request_http(redirect_count)
+            if self.scheme in ["http", "https"]:
+                return self.request_http(redirect_count)
+            else:
+                return self.about_blank()
 
         raw = self._read_response(response_headers, response)
 
@@ -132,12 +135,15 @@ class URL:
         content += "\n"
         return content
 
-
     def request_data(self) -> str:
         """Return the inline HTML content of the url."""
         assert self.scheme == "data"
         return unquote(self.data) + "\n"
 
+
+    def about_blank(self) -> str:
+        assert self.scheme == "about-blank"
+        return ""
 
     def _setup(self, url: str) -> None:
         """From url get relevant parts such as host, port, path and scheme."""
@@ -152,27 +158,35 @@ class URL:
         elif url.startswith("/"):
             self.path = url
             return
-        else:
+        elif "://" in url:
             self.scheme, url = url.split("://", 1)
-
-        assert self.scheme in ["http", "https", "file", "data"]
-
-        if "/" not in url:
-            url = url + "/"
-
-        self.host, url = url.split("/", 1)
-        self.path = "/" + url
-
-        if self.scheme == "http":
-            self.port = 80
-        elif self.scheme == "https":
-            self.port = 443
         else:
-            self.port = None
+            self.scheme = "about-blank"
+            return
 
-        if ":" in self.host:
-            self.host, port = self.host.split(":", 1)
-            self.port = int(port)
+        try:
+            if not self.scheme in ["http", "https", "file", "data"]:
+                self.scheme = "about-blank"
+
+            if "/" not in url:
+                url = url + "/"
+
+            self.host, url = url.split("/", 1)
+            self.path = "/" + url
+
+            if self.scheme == "http":
+                self.port = 80
+            elif self.scheme == "https":
+                self.port = 443
+            else:
+                self.port = None
+
+            if ":" in self.host:
+                self.host, port = self.host.split(":", 1)
+                self.port = int(port)
+        except Exception as e:
+            print(f"An error occured: {e}")
+            self.scheme = "about-blank"
 
 
 def show(body: str, view_source: bool = False) -> None:

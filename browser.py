@@ -68,6 +68,12 @@ class Browser:
 
       self.window = tkinter.Tk()
       self.window.title("PyBrow")
+
+      self.scrollbar = tkinter.Scrollbar(
+           self.window,
+           orient=tkinter.HORIZONTAL
+      )
+
       self.canvas = tkinter.Canvas(
          self.window,
          width=DEFAULT_WIDTH,
@@ -89,8 +95,10 @@ class Browser:
           body = url.request_http()
       elif url.scheme == "file":
           body = url.request_file()
-      else:
+      elif url.scheme == "data":
           body = url.request_data()
+      else:
+          body = url.about_blank()
 
       self.text = lex(body, url.view_source)
       self.display_list = layout(self.text, self.width)
