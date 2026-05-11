@@ -1,7 +1,8 @@
-import tkinter
 import sys
+import tkinter as tk
 
 from url import URL
+from tkinter import ttk
 
 DEFAULT_WIDTH, DEFAULT_HEIGHT = 800, 600
 HSTEP, VSTEP = 13, 18
@@ -66,19 +67,15 @@ class Browser:
       self.width = DEFAULT_WIDTH
       self.height = DEFAULT_HEIGHT
 
-      self.window = tkinter.Tk()
+      self.window = tk.Tk()
       self.window.title("PyBrow")
 
-      self.scrollbar = tkinter.Scrollbar(
-           self.window,
-           orient=tkinter.HORIZONTAL
-      )
-
-      self.canvas = tkinter.Canvas(
+      self.canvas = tk.Canvas(
          self.window,
          width=DEFAULT_WIDTH,
          height=DEFAULT_HEIGHT
       )
+ 
       self.canvas.pack(fill="both", expand=True)
 
       self.scroll = 0
@@ -110,16 +107,16 @@ class Browser:
          if y - self.height <= self.scroll <= y + VSTEP:
             self.canvas.create_text(x, y - self.scroll, text=c)
 
-   def _scrolldown(self, e: tkinter.EventType) -> None:
+   def _scrolldown(self, e: tk.EventType) -> None:
       self.scroll += SCROLL_STEP
       self._draw()
 
-   def _scrollup(self, e: tkinter.EventType) -> None:
+   def _scrollup(self, e: tk.EventType) -> None:
       if self.scroll >= SCROLL_STEP:
          self.scroll -= SCROLL_STEP
       self._draw()
 
-   def _resize(self, e: tkinter.EventType) -> None:
+   def _resize(self, e: tk.EventType) -> None:
      self.width = e.width
      self.height = e.height
 
@@ -129,4 +126,4 @@ class Browser:
 
 if __name__ == "__main__":
    Browser().load(URL(sys.argv[1]))
-   tkinter.mainloop()
+   tk.mainloop()
