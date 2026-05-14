@@ -6,6 +6,8 @@ import gzip
 from urllib.parse import unquote
 from typing import BinaryIO
 
+from lexing import Text, Tag, lex
+
 OPEN_SOCKETS = {}
 
 
@@ -123,7 +125,6 @@ class URL:
 
         return raw
 
-
     def request_file(self) -> str:
         """Return content from locally stored file."""
         assert self.scheme == "file"
@@ -140,10 +141,11 @@ class URL:
         assert self.scheme == "data"
         return unquote(self.data) + "\n"
 
-
     def about_blank(self) -> str:
+        """Show empty page in case of malformed URL."""
         assert self.scheme == "about-blank"
         return ""
+
 
     def _setup(self, url: str) -> None:
         """From url get relevant parts such as host, port, path and scheme."""
@@ -189,37 +191,6 @@ class URL:
             self.scheme = "about-blank"
 
 
-def show(body: str, view_source: bool = False) -> None:
-    """
-    Skip HTML tags and show the text of the body.
-    If view_source is True show body as is.
-    """
-    in_tag = False
-    i = 0
-    while i < len(body):
-        c = body[i]
-        if not view_source:
-            if c == "<":
-                in_tag = True
-            elif c == ">":
-                in_tag = False
-            elif c == "&":
-                entity = body[i:i + 4]
-                if entity == "&lt;":
-                    print("<", end="")
-                    i += 4
-                    continue
-                elif entity == "&gt;":
-                    print(">", end="")
-                    i += 4
-                    continue
-            elif not in_tag:
-                print(c, end="")
-        else:
-            print(c, end="")
-        i += 1
-
-
 def load(url: URL) -> None:
     """Depending on the scheme process URL accordingly and show the response body."""
     if url.scheme in ["http", "https"]:
@@ -229,7 +200,10 @@ def load(url: URL) -> None:
     else:
         body = url.request_data()
 
-    show(body, url.view_source)
+    tokens = lex(body, url.view_source)
+    for token in tokens:
+       if isinstance(token, Text):
+          print(token.text) 
 
 
 if __name__ == "__main__":

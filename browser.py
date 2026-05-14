@@ -1,62 +1,98 @@
 import sys
 import tkinter as tk
 
+import tkinter.font
+
 from url import URL
-from tkinter import ttk
+from lexing import lex, Text, Tag
+
+from typing import Union
 
 DEFAULT_WIDTH, DEFAULT_HEIGHT = 800, 600
 HSTEP, VSTEP = 13, 18
 SCROLL_STEP = 100
 
-PARAGRAPH_BREAK = 1.3
+FONTS = {}
 
+def get_font(size, weight, style):
+   key = (size, weight, style)
+   if key not in FONTS:
+      font = tkinter.font.Font(size=size, weight=weight, slant=style)
+      label = tkinter.Label(font=font)
+      FONTS[key] = (font, label)
+   return FONTS[key][0]
 
-def lex(body: str, view_source: bool = False) -> str:
-    in_tag = False
-    i = 0
-    text = ""
-    while i < len(body):
-        c = body[i]
-        if not view_source:
-            if c == "<":
-                in_tag = True
-            elif c == ">":
-                in_tag = False
-            elif c == "&":
-                entity = body[i:i + 4]
-                if entity == "&lt;":
-                    text += c
-                    i += 4
-                    continue
-                elif entity == "&gt;":
-                    text += c
-                    i += 4
-                    continue
-            elif not in_tag:
-               text += c
-        else:
-               text += c
-        i += 1
-    return text
+class Layout:
+   def __init__(self, tokens: list[Union[Text, Tag]], width: int):
+      self.display_list = []
+      self.width = width
+ 
+      self.cursor_x = HSTEP
+      self.cursor_y = VSTEP
+      self.weight = "normal"
+      self.style = "roman"
+      self.size = 12
 
+      self.line = []
+      
+      for token in tokens:
+         self._process_token(token)
+      self._flush()
 
-def layout(text: str, width: int) -> list[tuple[int, int, str]]:
-   display_list = []
-   cursor_x, cursor_y = HSTEP, VSTEP
-   for c in text:
-      if c == "\n":
-          cursor_y += PARAGRAPH_BREAK * VSTEP
-          cursor_x = HSTEP
+   def _process_token(self, token: Union[Text, Tag]) -> None: 
+      if isinstance(token, Text):
+         for word in token.text.split():
+            self._process_word(word)
+      elif token.tag == "i":
+         self.style = "italic"
+      elif token.tag == "/i":
+         self.style = "roman"
+      elif token.tag == "b":
+         self.weight = "bold"
+      elif token.tag == "/b":
+         self.weight = "normal"
+      elif token.tag == "small":
+         self.size -= 2
+      elif token.tag == "/small":
+         self.size += 2
+      elif token.tag == "big":
+         self.size += 4
+      elif token.tag == "/big":
+         self.size -= 4
+      elif token.tag == "br":
+         self._flush()
+      elif token.tag == "/p":
+         self._flush()
+         self.cursor_y += VSTEP
+
+   def _process_word(self, word: Text) -> None:
+      font = get_font(self.size, self.weight, self.style)
+      w = font.measure(word)
+      if self.cursor_x + w > self.width - HSTEP:
+         self._flush()
       else:
-          display_list.append((cursor_x, cursor_y, c))
-          cursor_x += HSTEP
+          self.line.append((self.cursor_x, word, font))
+          self.cursor_x += w + font.measure(" ")
 
-          if cursor_x >= width - HSTEP:
-             cursor_y += VSTEP
-             cursor_x = HSTEP
+   def _flush(self) -> None:
+      if not self.line:
+         return
 
-   return display_list
+      metrics = [font.metrics() for _, _, font in self.line]
+      max_ascent = max([m["ascent"] for m in metrics])
 
+      baseline = self.cursor_y + 1.25 * max_ascent
+
+      for x, word, font in self.line:
+         y = baseline - font.metrics("ascent")
+         self.display_list.append((x, y, word, font))
+
+      max_descent = max([m["descent"] for m in metrics])
+      self.cursor_y = baseline + 1.25 * max_descent
+  
+      self.cursor_x = HSTEP
+      self.line = []
+  
 
 class Browser:
    def __init__(self):
@@ -98,14 +134,14 @@ class Browser:
           body = url.about_blank()
 
       self.text = lex(body, url.view_source)
-      self.display_list = layout(self.text, self.width)
+      self.display_list = Layout(self.text, self.width).display_list
       self._draw()
 
    def _draw(self) -> None:
       self.canvas.delete("all")
-      for x, y, c in self.display_list:
+      for x, y, c, f in self.display_list:
          if y - self.height <= self.scroll <= y + VSTEP:
-            self.canvas.create_text(x, y - self.scroll, text=c)
+            self.canvas.create_text(x, y - self.scroll, text=c, font=f, anchor="nw")
 
    def _scrolldown(self, e: tk.EventType) -> None:
       self.scroll += SCROLL_STEP
@@ -121,8 +157,9 @@ class Browser:
      self.height = e.height
 
      if self.text and self.display_list:
-         self.display_list = layout(self.text, self.width)
+         self.display_list = Layout(self.text, self.width).display_list
          self._draw()
+
 
 if __name__ == "__main__":
    Browser().load(URL(sys.argv[1]))
