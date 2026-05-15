@@ -14,7 +14,8 @@ SCROLL_STEP = 100
 
 FONTS = {}
 
-def get_font(size, weight, style):
+def get_font(size: 12, weight: str, style: str) -> tkinter.font.Font:
+   """Return a cached font of given size, weight and style."""
    key = (size, weight, style)
    if key not in FONTS:
       font = tkinter.font.Font(size=size, weight=weight, slant=style)
@@ -23,6 +24,7 @@ def get_font(size, weight, style):
    return FONTS[key][0]
 
 class Layout:
+   """Determine how to display and position a list of Text tokens."""
    def __init__(self, tokens: list[Union[Text, Tag]], width: int):
       self.display_list = []
       self.width = width
@@ -40,6 +42,7 @@ class Layout:
       self._flush()
 
    def _process_token(self, token: Union[Text, Tag]) -> None: 
+      """Either process each word of a Text token or modify layout based on tag types."""
       if isinstance(token, Text):
          for word in token.text.split():
             self._process_word(word)
@@ -66,6 +69,7 @@ class Layout:
          self.cursor_y += VSTEP
 
    def _process_word(self, word: Text) -> None:
+      """Add word to a line at correct horizontal position."""
       font = get_font(self.size, self.weight, self.style)
       w = font.measure(word)
       if self.cursor_x + w > self.width - HSTEP:
@@ -75,6 +79,7 @@ class Layout:
           self.cursor_x += w + font.measure(" ")
 
    def _flush(self) -> None:
+      """Determine the baseline of a line and the correct y-coordinates of its words."""
       if not self.line:
          return
 
@@ -95,6 +100,7 @@ class Layout:
   
 
 class Browser:
+   """GUI to display and interact with content from URL queries."""
    def __init__(self):
 
       self.text = ""
@@ -124,6 +130,7 @@ class Browser:
       self.window.bind("<Configure>", self._resize)
 
    def load(self, url: URL) -> None:
+      """Request data from URL based on various schemes."""
       if url.scheme in ["http", "https"]:
           body = url.request_http()
       elif url.scheme == "file":
@@ -138,10 +145,11 @@ class Browser:
       self._draw()
 
    def _draw(self) -> None:
+      """Draw visible words to the Canvas."""
       self.canvas.delete("all")
-      for x, y, c, f in self.display_list:
+      for x, y, w, f in self.display_list:
          if y - self.height <= self.scroll <= y + VSTEP:
-            self.canvas.create_text(x, y - self.scroll, text=c, font=f, anchor="nw")
+            self.canvas.create_text(x, y - self.scroll, text=w, font=f, anchor="nw")
 
    def _scrolldown(self, e: tk.EventType) -> None:
       self.scroll += SCROLL_STEP
