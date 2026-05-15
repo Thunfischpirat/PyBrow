@@ -2,3 +2,4 @@
 *.html
 .codex
 __pycache__/
+.coverage

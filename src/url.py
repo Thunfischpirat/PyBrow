@@ -26,11 +26,11 @@ class URL:
 
         response = s.makefile("rb", encoding="utf8", newline="\r\n")
         statusline = response.readline()
-        _, status, _ = statusline.decode("utf-8").split(" ", 2)
+        _, self.status, _ = statusline.decode("utf-8").split(" ", 2)
 
         response_headers = self._get_response_headers(response)
 
-        if 300 <= int(status) < 400:
+        if 300 <= int(self.status) < 400:
             redirect_count += 1
             if redirect_count > 5:
                 raise RuntimeError("Maximum number of 5 redirects exceeded")
@@ -162,49 +162,49 @@ class URL:
             return
         elif "://" in url:
             self.scheme, url = url.split("://", 1)
+            if self.scheme not in ["http", "https", "file"]:
+               self.scheme = "about-blank"
+               return
         else:
             self.scheme = "about-blank"
             return
 
-        try:
-            if not self.scheme in ["http", "https", "file", "data"]:
-                self.scheme = "about-blank"
+        if "/" not in url:
+            url = url + "/"
+        
+        self.host, url = url.split("/", 1)
+        self.path = "/" + url
+        
+        if self.scheme == "http":
+            self.port = 80
+        elif self.scheme == "https":
+            self.port = 443
+        else:
+            self.port = None
+        
+        if ":" in self.host:
+            self.host, port = self.host.split(":", 1)
+            try: 
+               self.port = int(port)
+            except:
+               self.scheme = "about-blank"
+        
 
-            if "/" not in url:
-                url = url + "/"
-
-            self.host, url = url.split("/", 1)
-            self.path = "/" + url
-
-            if self.scheme == "http":
-                self.port = 80
-            elif self.scheme == "https":
-                self.port = 443
-            else:
-                self.port = None
-
-            if ":" in self.host:
-                self.host, port = self.host.split(":", 1)
-                self.port = int(port)
-        except Exception as e:
-            print(f"An error occured: {e}")
-            self.scheme = "about-blank"
-
-
-def load(url: URL) -> None:
+def load(url: URL) -> None: #pragma: no cover
     """Depending on the scheme process URL accordingly and show the response body."""
     if url.scheme in ["http", "https"]:
         body = url.request_http()
     elif url.scheme == "file":
         body = url.request_file()
-    else:
+    elif url.scheme == "data":
         body = url.request_data()
-
+    else:
+        body = url.about_blank()
     tokens = lex(body, url.view_source)
     for token in tokens:
        if isinstance(token, Text):
           print(token.text) 
 
 
-if __name__ == "__main__":
+if __name__ == "__main__": #pragma: no cover
     load(URL(sys.argv[1]))

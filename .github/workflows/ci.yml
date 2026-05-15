@@ -1,0 +1,30 @@
+name: PyBrow
+
+on:
+   push:
+   pull_request:
+
+jobs:
+   test:
+      runs-on: ubuntu-latest
+
+      steps:
+         - name: Checkout Repo
+           uses: actions/checkout@v4
+
+         - name: Set up Python
+           uses: actions/setup-python@v6
+           with:
+              python-version: "3.14"
+
+         - name: Check Syntax
+           run: python3 -m compileall .
+         
+         - name: Test Functionality
+           run: |
+                python3 -m pip install coverage 
+                PYTHONPATH=src python3 -m coverage run -m unittest
+                python3 -m coverage report -m
+         
+
+     
