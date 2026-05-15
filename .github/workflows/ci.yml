@@ -1,0 +1,27 @@
+name: PyBrow
+
+on:
+   push:
+   pull_request:
+
+jobs:
+   build:
+      runs-on: ubuntu-latest
+
+      steps:
+         - name: Checkout Repo
+           uses: actions/checkout@v4
+
+         - name: Set up Python
+           uses: actions/setup-python@v6
+           with:
+              python-version: "3.14"
+
+   test: 
+      runs-on: ubuntu-latest
+     
+      steps:
+         - name: Check Syntax
+           run: python3 -m compileall .
+
+      
