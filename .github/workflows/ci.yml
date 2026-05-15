@@ -5,7 +5,7 @@ on:
    pull_request:
 
 jobs:
-   build:
+   test:
       runs-on: ubuntu-latest
 
       steps:
@@ -17,10 +17,6 @@ jobs:
            with:
               python-version: "3.14"
 
-   test: 
-      runs-on: ubuntu-latest
-     
-      steps:
          - name: Check Syntax
            run: python3 -m compileall .
          
