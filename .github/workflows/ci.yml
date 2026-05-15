@@ -23,5 +23,9 @@ jobs:
       steps:
          - name: Check Syntax
            run: python3 -m compileall .
+         
+         - name: Test Functionality
+           run: PYTHONPATH=src python3 -m unittest
+         
 
       

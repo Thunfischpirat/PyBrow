@@ -26,11 +26,11 @@ class URL:
 
         response = s.makefile("rb", encoding="utf8", newline="\r\n")
         statusline = response.readline()
-        _, status, _ = statusline.decode("utf-8").split(" ", 2)
+        _, self.status, _ = statusline.decode("utf-8").split(" ", 2)
 
         response_headers = self._get_response_headers(response)
 
-        if 300 <= int(status) < 400:
+        if 300 <= int(self.status) < 400:
             redirect_count += 1
             if redirect_count > 5:
                 raise RuntimeError("Maximum number of 5 redirects exceeded")
@@ -199,7 +199,6 @@ def load(url: URL) -> None:
         body = url.request_file()
     else:
         body = url.request_data()
-
     tokens = lex(body, url.view_source)
     for token in tokens:
        if isinstance(token, Text):
