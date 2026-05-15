@@ -21,7 +21,10 @@ jobs:
            run: python3 -m compileall .
          
          - name: Test Functionality
-           run: PYTHONPATH=src python3 -m unittest
+           run: |
+                python3 -m pip install coverage 
+                PYTHONPATH=src python3 -m coverage run -m unittest
+                python3 -m coverage report -m
          
 
-      
+     
