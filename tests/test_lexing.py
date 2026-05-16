@@ -10,7 +10,14 @@ class TestLexing(unittest.TestCase):
 
    def test_tags(self):
       body = "<b>Hello world!</b>"
-      expected_list = [Tag(tag='b'), Text(text='Hello world!'), Tag(tag='/b')]
+      expected_list = [Tag('b', dict()), Text(text='Hello world!'), Tag('/b', dict())]
+      self.assertEqual(lex(body), expected_list)
+
+   def test_tag_attributes(self):
+      body = '<h1 class="title"> and </h1>'
+      expected_list = [Tag("h1", {"class": '"title"'}),
+                       Text(text=" and "), 
+                       Tag("/h1", dict())]
       self.assertEqual(lex(body), expected_list)
 
    def test_entities(self):

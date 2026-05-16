@@ -8,7 +8,27 @@ class Text:
 
 @dataclass
 class Tag:
-   tag: str
+   tagname: str
+   attributes: dict[str, str] 
+
+def parse_tag(buffer: str) -> Tag:
+   """Return tag with name and attributes from buffer string."""
+   entries = buffer.split()
+   tagname = entries.pop(0) 
+   attributes = dict()
+
+   if tagname == "!DOCTYPE":
+      return Tag(tagname, attributes)
+   elif tagname == "!--":
+      return Tag(tagname, {"comment": entries.pop(0) })
+
+   for e in entries:
+      if "=" in e:
+         name, value = e.split("=", 1)
+         attributes[name] = value
+
+   return Tag(tagname, attributes)
+   
 
 def lex(body: str, view_source: bool = False) -> list[Union[Text, Tag]]:
     """Tokenize a response body into Text and Tag elements."""
@@ -30,7 +50,7 @@ def lex(body: str, view_source: bool = False) -> list[Union[Text, Tag]]:
             buffer = ""
         elif c == ">":
             in_tag = False
-            out.append(Tag(buffer)) 
+            out.append(parse_tag(buffer)) 
             buffer = ""
         elif c == "&":
             entity = body[i:i + 4]

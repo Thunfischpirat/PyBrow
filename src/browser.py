@@ -35,6 +35,8 @@ class Layout:
       self.style = "roman"
       self.size = 12
 
+      self.center = False
+
       self.line = []
       
       for token in tokens:
@@ -46,27 +48,32 @@ class Layout:
       if isinstance(token, Text):
          for word in token.text.split():
             self._process_word(word)
-      elif token.tag == "i":
+      elif token.tagname == "i":
          self.style = "italic"
-      elif token.tag == "/i":
+      elif token.tagname == "/i":
          self.style = "roman"
-      elif token.tag == "b":
+      elif token.tagname == "b":
          self.weight = "bold"
-      elif token.tag == "/b":
+      elif token.tagname == "/b":
          self.weight = "normal"
-      elif token.tag == "small":
+      elif token.tagname == "small":
          self.size -= 2
-      elif token.tag == "/small":
+      elif token.tagname == "/small":
          self.size += 2
-      elif token.tag == "big":
+      elif token.tagname == "big":
          self.size += 4
-      elif token.tag == "/big":
+      elif token.tagname == "/big":
          self.size -= 4
-      elif token.tag == "br":
+      elif token.tagname == "br":
          self._flush()
-      elif token.tag == "/p":
+      elif token.tagname == "/p":
          self._flush()
          self.cursor_y += VSTEP
+      elif token.tagname == "h1" and token.attributes.get("class") == '"title"':
+         self.center = True
+      elif token.tagname == "/h1":
+         self._flush()
+         self.center = False
 
    def _process_word(self, word: Text) -> None:
       """Add word to a line at correct horizontal position."""
@@ -74,9 +81,9 @@ class Layout:
       w = font.measure(word)
       if self.cursor_x + w > self.width - HSTEP:
          self._flush()
-      else:
-          self.line.append((self.cursor_x, word, font))
-          self.cursor_x += w + font.measure(" ")
+
+      self.line.append((self.cursor_x, word, font))
+      self.cursor_x += w + font.measure(" ")
 
    def _flush(self) -> None:
       """Determine the baseline of a line and the correct y-coordinates of its words."""
@@ -85,11 +92,20 @@ class Layout:
 
       metrics = [font.metrics() for _, _, font in self.line]
       max_ascent = max([m["ascent"] for m in metrics])
+  
+      if self.center:
+         x_last, w_last, font_last = self.line[-1]
+         line_end = x_last + font_last.measure(w_last)
+         offset_center = (self.width - line_end - HSTEP) / 2
 
       baseline = self.cursor_y + 1.25 * max_ascent
 
-      for x, word, font in self.line:
+      for i, (x, word, font) in enumerate(self.line):
          y = baseline - font.metrics("ascent")
+
+         if self.center:
+            x += offset_center
+
          self.display_list.append((x, y, word, font))
 
       max_descent = max([m["descent"] for m in metrics])
