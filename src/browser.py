@@ -91,13 +91,42 @@ class Layout:
       if self.sup:
          modifiers.append("sup")
       
-      w = font.measure(word)
+      if self._check_linebreak(word.replace("\N{soft hyphen}", ""), font):
+         if "\N{soft hyphen}" in word:
+            w_front, w_back = self._find_longest_subword(word, font)
+ 
+            if w_front:
+               self.line.append((self.cursor_x, w_front + "-", font, modifiers))
+               self._flush()
+               self._process_word(w_back)
+               return
+   
+            if self.line:
+               self._flush()
+               self._process_word(w_back)
+               return
 
-      if self.cursor_x + w > self.width - HSTEP:
          self._flush()
 
+      word = word.replace("\N{soft hyphen}", "")
+
       self.line.append((self.cursor_x, word, font, modifiers))
-      self.cursor_x += w + font.measure(" ")
+      self.cursor_x += font.measure(word) + font.measure(" ")
+
+   def _find_longest_subword(self, word: str, font: tkinter.font.Font) -> tuple[str,str]:
+      """Find the longest part of a hyphenated word that still fits in the line."""
+      word_parts = word.split("\N{soft hyphen}")
+
+      w_front = ""
+      while word_parts and not self._check_linebreak(w_front + word_parts[0] + "-", font):
+         w_front += word_parts.pop(0)
+      w_back = "\N{soft hyphen}".join(word_parts)
+   
+      return w_front, w_back
+
+   def _check_linebreak(self, word: str, font: tkinter.font.Font) -> bool:
+      """Check whether the given word fits in the current line."""
+      return self.cursor_x + font.measure(word) > self.width - HSTEP
 
    def _flush(self) -> None:
       """Determine the baseline of a line and the correct y-coordinates of its words."""

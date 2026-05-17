@@ -54,14 +54,17 @@ def lex(body: str, view_source: bool = False) -> list[Union[Text, Tag]]:
             out.append(parse_tag(buffer)) 
             buffer = ""
         elif c == "&":
-            entity = body[i:i + 4]
-            if entity == "&lt;":
+            if body[i:i+4] == "&lt;":
                 buffer += "<"
                 i += 4
                 continue
-            elif entity == "&gt;":
+            elif body[i:i+4] == "&gt;":
                 buffer += ">"
                 i += 4
+                continue
+            elif body[i:i+5] == "&shy;":
+                buffer += "\N{soft hyphen}"
+                i += 5
                 continue
         else:
            buffer += c
