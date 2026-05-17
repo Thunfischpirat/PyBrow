@@ -14,6 +14,7 @@ SCROLL_STEP = 100
 
 FONTS = {}
 
+
 def get_font(size: 12, weight: str, style: str) -> tkinter.font.Font:
    """Return a cached font of given size, weight and style."""
    key = (size, weight, style)
@@ -36,6 +37,7 @@ class Layout:
       self.size = 12
 
       self.center = False
+      self.sup = False
 
       self.line = []
       
@@ -74,15 +76,27 @@ class Layout:
       elif token.tagname == "/h1":
          self._flush()
          self.center = False
+      elif token.tagname == "sup":
+         self.sup = True
+         self.size = int(self.size * 0.5)
+      elif token.tagname == "/sup":
+         self.sup = False
+         self.size *= 2
 
-   def _process_word(self, word: Text) -> None:
+   def _process_word(self, word: str) -> None:
       """Add word to a line at correct horizontal position."""
       font = get_font(self.size, self.weight, self.style)
+
+      modifiers = []
+      if self.sup:
+         modifiers.append("sup")
+      
       w = font.measure(word)
+
       if self.cursor_x + w > self.width - HSTEP:
          self._flush()
 
-      self.line.append((self.cursor_x, word, font))
+      self.line.append((self.cursor_x, word, font, modifiers))
       self.cursor_x += w + font.measure(" ")
 
    def _flush(self) -> None:
@@ -90,7 +104,7 @@ class Layout:
       if not self.line:
          return
 
-      metrics = [font.metrics() for _, _, font in self.line]
+      metrics = [font.metrics() for _, _, font, _ in self.line]
       max_ascent = max([m["ascent"] for m in metrics])
   
       if self.center:
@@ -100,11 +114,14 @@ class Layout:
 
       baseline = self.cursor_y + 1.25 * max_ascent
 
-      for i, (x, word, font) in enumerate(self.line):
+      for i, (x, word, font, modifiers) in enumerate(self.line):
          y = baseline - font.metrics("ascent")
 
          if self.center:
             x += offset_center
+
+         if "sup" in modifiers:
+            y = baseline - max_ascent
 
          self.display_list.append((x, y, word, font))
 

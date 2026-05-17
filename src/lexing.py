@@ -8,6 +8,7 @@ class Text:
 
 @dataclass
 class Tag:
+   """A tag has a name and attributes with values."""
    tagname: str
    attributes: dict[str, str] 
 
